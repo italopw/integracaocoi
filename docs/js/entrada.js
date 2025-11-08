@@ -2,15 +2,9 @@
 // Módulo que contém a lógica do formulário que estava inline em entrada.html
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-setLogLevel('debug');
-
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : ((typeof _firebase_config !== 'undefined') ? JSON.parse(_firebase_config) : null);
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+import { firebaseConfig } from './firebase-config.js';
 
 let db, auth, userId;
 const SECTORS = [
@@ -21,32 +15,25 @@ const SECTORS = [
 
 // Inicialização Firebase
 async function initializeFirebaseForm() {
-    if (!firebaseConfig) {
-        console.warn('Firebase config não encontrada. Modo mock/local ativado.');
-        return;
-    }
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
     try {
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
-        userId = auth.currentUser?.uid || (crypto && crypto.randomUUID ? crypto.randomUUID() : ('user-' + Date.now()));
+        await signInAnonymously(auth);
+        userId = auth.currentUser?.uid || crypto.randomUUID();
         console.log(`✅ Autenticação Firebase bem-sucedida. User ID: ${userId}`);
         loadLastStatusFromFirestore();
     } catch (error) {
         console.error('Falha na autenticação:', error);
+        showFeedback('Erro ao conectar com o servidor. Tente novamente.', true);
     }
 }
 
 function getPlanningDocRefPrivate() {
-    return doc(db, `artifacts/${appId}/users/${userId}/planning_data/current_status`);
+    return doc(db, `users/${userId}/planning_data/current_status`);
 }
 function getPlanningDocRefPublic() {
-    return doc(db, `artifacts/${appId}/public/data/planning_data/current_status`);
+    return doc(db, `public/planning_data/current_status`);
 }
 
 function getCurrentDateString() {
@@ -130,8 +117,6 @@ export async function handleTransmission(event) {
     } catch (error) {
         showFeedback(`❌ Erro ao salvar/atualizar o planejamento: ${error?.message || error}`, true);
         console.error('Erro na transmissão (salvar público):', error);
-    } finally {
-        try { localStorage.setItem('planning_public', JSON.stringify(formData)); console.log('Mock: planning_public escrito no localStorage para testes locais.'); } catch (e) { console.warn('Não foi possível escrever planning_public no localStorage:', e); }
     }
 }
 

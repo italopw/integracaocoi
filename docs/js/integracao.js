@@ -2,40 +2,21 @@
 // Módulo exportado do script que estava inline em integracao.html
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-setLogLevel('debug'); // Ativa logs de debug para o Firestore
-
-// Variáveis Globais (fornecidas pelo ambiente Canvas)
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { firebaseConfig } from './firebase-config.js';
 
 let db, auth;
 let isAuthReady = false;
 
 // Inicialização e Autenticação Firebase
 export async function initializeFirebaseDashboard() {
-    if (!firebaseConfig) {
-        console.error("Firebase Config não encontrada.");
-        // mesmo sem firebase, chamamos listenToPlanningData para ativar mock
-        listenToPlanningData();
-        return;
-    }
-
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
 
-    // Tenta autenticar com token ou anonimamente
     try {
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
+        await signInAnonymously(auth);
         console.log("✅ Autenticação Firebase bem-sucedida.");
     } catch (error) {
         console.error("❌ Falha na autenticação Firebase:", error);
@@ -44,17 +25,19 @@ export async function initializeFirebaseDashboard() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             console.log(`Usuário autenticado: ${user.uid}`);
+            isAuthReady = true;
+            listenToPlanningData(); // Começa a escutar após a autenticação
         } else {
             console.log("Usuário desautenticado.");
+            document.getElementById('status-conexao').textContent = "DESCONECTADO";
+            document.getElementById('status-conexao').className = 'text-red-500 font-bold';
         }
-        isAuthReady = true;
-        listenToPlanningData(); // Começa a escutar após a autenticação
     });
 }
 
 // Obtém a referência do documento público
 function getPlanningDocRef() {
-    return doc(db, `artifacts/${appId}/public/data/planning_data/current_status`);
+    return doc(db, 'public/planning_data/current_status');
 }
 
 // Função para escutar mudanças nos dados do planejamento (Firestore ou fallback localStorage)
@@ -80,17 +63,13 @@ function listenToPlanningData() {
                 console.error("Erro ao escutar dados do Firestore:", error);
                 statusIndicator.textContent = "ERRO: Falha na conexão Firestore.";
                 statusIndicator.className = 'text-red-500 font-bold';
-                // Se houver erro, ativa o modo local
-                startLocalMockListener();
             });
-            return;
         } catch (e) {
-            console.warn('Falha ao configurar listener Firestore, usando modo local.', e);
+            console.error('Erro ao configurar listener Firestore:', e);
+            statusIndicator.textContent = "ERRO: Falha ao configurar conexão.";
+            statusIndicator.className = 'text-red-500 font-bold';
         }
     }
-
-    // Se não houver Firestore configurado ou autenticação, usa listener localStorage (mock)
-    startLocalMockListener();
 }
 
 // Fallback: listener que usa localStorage para testes locais (funciona entre abas no mesmo host)
