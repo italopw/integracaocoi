@@ -1,0 +1,15 @@
+{
+  "timestamp": 1700000000000,
+  "data": "2025-11-07",
+  "turno": "TURNO 1",
+  "setores": [
+    { "id": "moegas-recepcao", "nome": "MOEGAS/RECEPÇÃO", "status": "Operando dentro dos parâmetros. Manutenção preventiva concluída.", "prioridade": "NORMAL" },
+    { "id": "silos-e-pre-secagens", "nome": "SILOS E PRÉ-SECAGENS", "status": "Silo 3 com redução de fluxo - equipe acionada.", "prioridade": "MÉDIA" },
+    { "id": "silo-pulmao", "nome": "SILO PULMÃO", "status": "Nível estável. Monitoramento recomendado.", "prioridade": "BAIXA" },
+    { "id": "silos-de-repasse", "nome": "SILOS DE REPASSE", "status": "Transporte normal. Sem intercorrências.", "prioridade": "NORMAL" },
+    { "id": "beneficiamento", "nome": "BENEFICIAMENTO", "status": "Parcialmente parado por falta de matéria-prima. Priorizando ensaque.", "prioridade": "ALTA" },
+    { "id": "ensaque", "nome": "ENSAQUE", "status": "Operando em dois turnos, sem problemas.", "prioridade": "NORMAL" },
+    { "id": "marcold", "nome": "MARCOLD", "status": "Temperatura dentro do esperado.", "prioridade": "BAIXA" },
+    { "id": "graneleiro-adriana", "nome": "GRANELEIRO ADRIANA", "status": "Aguardar liberação do operador para início da descarga.", "prioridade": "MÉDIA" }
+  ]
+}

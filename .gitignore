@@ -1,0 +1,16 @@
+# Node / Python temp files
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# Local server artifacts
+*.log
+
+# Ignore secrets if any
+.env

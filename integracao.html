@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard do COI (Visualização em Tempo Real)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    setLogLevel('debug'); // Ativa logs de debug para o Firestore
+        
+    // Variáveis Globais (fornecidas pelo ambiente Canvas)
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    let db, auth;
+    let isAuthReady = false;
+
+    // Inicialização e Autenticação Firebase
+    async function initializeFirebase() {
+      if (!firebaseConfig) {
+        console.error("Firebase Config não encontrada.");
+        return;
+      }
+
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+
+      // Tenta autenticar com token ou anonimamente
+      try {
+        if (initialAuthToken) {
+          await signInWithCustomToken(auth, initialAuthToken);
+        } else {
+          await signInAnonymously(auth);
+        }
+        console.log("✅ Autenticação Firebase bem-sucedida.");
+      } catch (error) {
+        console.error("❌ Falha na autenticação Firebase:", error);
+      }
+            
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          console.log(`Usuário autenticado: ${user.uid}`);
+        } else {
+          console.log("Usuário desautenticado.");
+        }
+        isAuthReady = true;
+        listenToPlanningData(); // Começa a escutar após a autenticação
+      });
+    }
+
+    // Obtém a referência do documento público
+    function getPlanningDocRef() {
+      // Caminho público: artifacts/{appId}/public/data/planning_data/current_status
+      // Garantindo 6 segmentos (par)
+      return doc(db, `artifacts/${appId}/public/data/planning_data/current_status`);
+    }
+
+    // Função para escutar mudanças nos dados do planejamento (Firestore ou fallback localStorage)
+    function listenToPlanningData() {
+      const statusIndicator = document.getElementById('status-conexao');
+
+      if (db && isAuthReady) {
+        try {
+          const docRef = getPlanningDocRef();
+          // onSnapshot: Atualiza em tempo real sempre que os dados mudam no Firestore
+          onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              statusIndicator.textContent = "CONECTADO: Dados atualizados.";
+              statusIndicator.className = 'text-green-500 font-bold';
+              updateDashboard(data);
+            } else {
+              statusIndicator.textContent = "CONECTADO: Aguardando primeira transmissão...";
+              statusIndicator.className = 'text-yellow-500 font-bold';
+              document.getElementById('dashboard-content').innerHTML = '<p class="text-center text-gray-500 p-8">Nenhum dado de planejamento encontrado. Por favor, utilize a Interface de Entrada (A) para transmitir o primeiro status operacional.</p>';
+            }
+          }, (error) => {
+            console.error("Erro ao escutar dados do Firestore:", error);
+            statusIndicator.textContent = "ERRO: Falha na conexão Firestore.";
+            statusIndicator.className = 'text-red-500 font-bold';
+            // Se houver erro, ativa o modo local
+            startLocalMockListener();
+          });
+          return;
+        } catch (e) {
+          console.warn('Falha ao configurar listener Firestore, usando modo local.', e);
+        }
+      }
+
+      // Se não houver Firestore configurado ou autenticação, usa listener localStorage (mock)
+      startLocalMockListener();
+    }
+
+    // Fallback: listener que usa localStorage para testes locais (funciona entre abas no mesmo host)
+    function startLocalMockListener() {
+      const statusIndicator = document.getElementById('status-conexao');
+      statusIndicator.textContent = "MODO MOCK: ouvindo localStorage.";
+      statusIndicator.className = 'text-indigo-400 font-bold';
+
+      try {
+        const raw = localStorage.getItem('planning_public');
+        if (raw) {
+          const data = JSON.parse(raw);
+          updateDashboard(data);
+        }
+      } catch (e) {
+        console.warn('Erro ao ler mock localStorage:', e);
+      }
+
+      // Também tenta buscar um arquivo de mock público (planning_public.json) no servidor
+      try {
+        fetch('/planning_public.json').then(res => {
+          if (!res.ok) return null;
+          return res.json();
+        }).then(json => {
+          if (json) {
+            console.log('Mock: carregado planning_public.json do servidor.');
+            updateDashboard(json);
+            document.getElementById('status-conexao').textContent = 'MODO MOCK: dados carregados de planning_public.json';
+            document.getElementById('status-conexao').className = 'text-green-500 font-bold';
+          }
+        }).catch(err => {
+          // não crítico
+        });
+      } catch (e) {
+        // ignore
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'planning_public') {
+          try {
+            const data = JSON.parse(e.newValue);
+            document.getElementById('status-conexao').textContent = 'MODO MOCK: Dados atualizados via localStorage.';
+            document.getElementById('status-conexao').className = 'text-green-500 font-bold';
+            updateDashboard(data);
+          } catch (err) {
+            console.error('Erro ao parsear planning_public do localStorage:', err);
+          }
+        }
+      });
+    }
+
+    // --- Funções de Renderização e Lógica do Dashboard ---
+
+    // Mapeia prioridades para classes Tailwind (para cores)
+    function getPriorityClass(priority) {
+      const normalizedPriority = priority ? priority.toLowerCase() : 'normal';
+      switch (normalizedPriority) {
+        case 'alta': return 'priority-alta bg-white';
+        case 'média': return 'priority-media bg-white';
+        case 'baixa': return 'priority-baixa bg-white';
+        default: return 'priority-normal bg-white';
+      }
+    }
+
+    // Função principal para atualizar o Dashboard com novos dados
+    function updateDashboard(data) {
+    <script type="module" src="/js/integracao.js"></script>
+      const normalizedPriority = priority ? priority.toLowerCase() : 'normal';

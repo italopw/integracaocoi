@@ -1,0 +1,28 @@
+/* Arquivo: css/style.css
+   Combina os estilos custom usados em entrada.html e integracao.html
+*/
+
+body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; color: #333; }
+.header-bg { background-color: #0d2545; color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.card { transition: transform 0.2s, box-shadow 0.2s; border-radius: 8px; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); }
+
+/* Entrada specific */
+.card { transition: box-shadow 0.2s; }
+.card:hover { box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); }
+textarea { resize: vertical; min-height: 120px; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06); }
+.section-name { color: #0d2545; }
+.priority-select { border-radius: 6px; border: 1px solid #ccc; padding: 6px; }
+
+/* Prioridades (dashboard) */
+.priority-alta { color: #e74c3c; font-weight: 700; border-left: 5px solid #e74c3c; }
+.priority-media { color: #f39c12; font-weight: 700; border-left: 5px solid #f39c12; }
+.priority-baixa { color: #2ecc71; font-weight: 700; border-left: 5px solid #2ecc71; }
+.priority-normal { color: #3498db; font-weight: 700; border-left: 5px solid #3498db; }
+.status-header { border-bottom: 2px solid #ecf0f1; margin-bottom: 10px; padding-bottom: 8px; }
+.last-update { font-size: 0.75rem; color: #95a5a6; }
+
+/* Feedback animations */
+#feedback-message { transition: opacity 0.5s, transform 0.5s; }
+.fade-in { opacity: 1; transform: translateY(0); }
+.fade-out { opacity: 0; transform: translateY(10px); }
