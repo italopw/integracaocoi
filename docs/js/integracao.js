@@ -72,50 +72,24 @@ function listenToPlanningData() {
     }
 }
 
-// Fallback: listener que usa localStorage para testes locais (funciona entre abas no mesmo host)
-function startLocalMockListener() {
-    const statusIndicator = document.getElementById('status-conexao');
-    if (statusIndicator) {
-        statusIndicator.textContent = "MODO MOCK: ouvindo localStorage.";
-        statusIndicator.className = 'text-indigo-400 font-bold';
-    }
 
-    try {
-        const raw = localStorage.getItem('planning_public');
-        if (raw) {
-            const data = JSON.parse(raw);
-            updateDashboard(data);
-        }
-    } catch (e) {
-        console.warn('Erro ao ler mock localStorage:', e);
-    }
-
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'planning_public') {
-            try {
-                const data = JSON.parse(e.newValue);
-                const indicator = document.getElementById('status-conexao');
-                if (indicator) {
-                    indicator.textContent = 'MODO MOCK: Dados atualizados via localStorage.';
-                    indicator.className = 'text-green-500 font-bold';
-                }
-                updateDashboard(data);
-            } catch (err) {
-                console.error('Erro ao parsear planning_public do localStorage:', err);
-            }
-        }
-    });
-}
 
 // Mapeia prioridades para classes Tailwind (para cores)
 function getPriorityClass(priority) {
-    const normalizedPriority = priority ? priority.toLowerCase() : 'normal';
+    if (!priority) return 'priority-normal bg-white';
+    
+    // Normaliza removendo acentos e convertendo para minúsculo
+    const normalizedPriority = priority
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    
     switch (normalizedPriority) {
         case 'alta': return 'priority-alta bg-white';
-        case 'média': return 'priority-media bg-white';
+        case 'media': return 'priority-media bg-white';
         case 'baixa': return 'priority-baixa bg-white';
+        case 'normal': return 'priority-normal bg-white';
         default: return 'priority-normal bg-white';
-    }
 }
 
 // Função principal para atualizar o Dashboard com novos dados
